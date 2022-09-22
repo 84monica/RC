@@ -108,10 +108,10 @@ int main(int argc, char *argv[])
         int bytes = read(fd, buf1+i, 1);
         if (bytes > 0) {
             printf(":%s:%d\n", buf1+i, bytes);
-            i++;
             if (buf1[i] == '\0')
                 STOP = TRUE;
         }
+        i++;
     }
 
     // Restore the old port settings
