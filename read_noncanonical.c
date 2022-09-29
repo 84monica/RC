@@ -21,7 +21,18 @@
 
 #define BUF_SIZE 256
 
-volatile int STOP = FALSE;
+
+#define FLAG 0x7E
+// Campo de Enderesso
+#define A_SET 0x03    // Comandos enviados pelo Emissor e Respostas enviadas pelo Receptor
+#define A_UA 0x03    // Comandos enviados pelo Receptor e Respostas enviadas pelo Emissor
+// Campo de Controlo
+#define C_SET 0x03  // Define o tipo de trama 
+#define C_UA 0x07
+// Campo de Proteção
+#define BCC_SET (A_SET ^ C_SET)
+#define BCC_UA (A_UA ^ A_SET)
+
 
 int main(int argc, char *argv[])
 {
@@ -88,23 +99,58 @@ int main(int argc, char *argv[])
 
     printf("New termios structure set\n");
 
-    // Loop for input
-    unsigned char buf[BUF_SIZE] = {0};
+    // READ SET MESSAGE
+    unsigned char buf[BUF_SIZE];
     int i = 0;
-    while (STOP == FALSE)
+    int STATE = 0;
+    while (STATE != 5)
     {
-        int bytes = read(fd, buf+i, 1);
+        int bytes = read(fd, buf + i, 1);
+        //printf("%hx %d\n", buf[i], STATE);
         if (bytes > 0) {
-            printf(":%s:%d\n", buf+i, bytes);
-            if (buf[i] == '\0')
-                STOP = TRUE;
+            // STATE MACHINE
+            switch (STATE)
+            {
+            case 0:
+                if (buf[i] == FLAG) STATE = 1;
+                break;
+            case 1:
+                if (buf[i] == A_SET) STATE = 2;
+                else STATE = 0;
+                break;
+            case 2:
+                if (buf[i] == FLAG) STATE = 1;
+                if (buf[i] == C_SET) STATE = 3;
+                else STATE = 0;
+                break;
+            case 3:
+                if (buf[i] == FLAG) STATE = 1;
+                if (buf[i] == BCC_SET) STATE = 4;
+                else STATE = 0;
+                break;
+            case 4:
+                if (buf[i] == FLAG) STATE = 5;
+                else STATE = 0;
+                break;
+            
+            default:
+                break;
+            }
+            i++; 
         }
-        i++;
     }
+    printf("SET RECEIVED\n");
 
-    // send back
-    int bytes = write(fd, buf, strlen(buf)+1);
-    printf("%d bytes written\n", bytes);
+    // SEND UA MESSAGE
+    unsigned char ua_message[BUF_SIZE];
+    ua_message[0] = FLAG;
+    ua_message[1] = A_UA;
+    ua_message[2] = C_UA;
+    ua_message[3] = BCC_UA;
+    ua_message[4] = FLAG;
+
+    int bytes = write(fd, ua_message, 5);
+    printf("UA MESSAGE SENT - %d bytes written\n", bytes);
 
     // The while() cycle should be changed in order to respect the specifications
     // of the protocol indicated in the Lab guide
