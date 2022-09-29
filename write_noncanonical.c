@@ -33,7 +33,7 @@ volatile int STOP = FALSE;
 #define C_UA 0x07
 // Campo de Proteção
 #define BCC_SET (A_SET ^ C_SET)
-#define BCC_UA (A_UA ^ A_SET)
+#define BCC_UA (A_UA ^ A_UA)
 
 
 int main(int argc, char *argv[])
