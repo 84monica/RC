@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <termios.h>
 #include <unistd.h>
+#include "alarm.c"
 
 // Baudrate settings are defined in <asm/termbits.h>, which is
 // included by <termios.h>
@@ -80,8 +81,8 @@ int main(int argc, char *argv[])
 
     // Set input mode (non-canonical, no echo,...)
     newtio.c_lflag = 0;
-    newtio.c_cc[VTIME] = 0; // Inter-character timer unused
-    newtio.c_cc[VMIN] = 5;  // Blocking read until 5 chars received
+    newtio.c_cc[VTIME] = 1; // Inter-character timer unused
+    newtio.c_cc[VMIN] = 0;  // Blocking read until 5 chars received
 
     // VTIME e VMIN should be changed in order to protect with a
     // timeout the reception of the following character(s)
@@ -110,54 +111,75 @@ int main(int argc, char *argv[])
     set_message[3] = BCC_SET;
     set_message[4] = FLAG;
 
-    int bytes = write(fd, set_message, 5);
-    printf("SET MESSAGE SENT - %d bytes written\n", bytes);
+    // Set alarm function handler
+    (void)signal(SIGALRM, alarmHandler);
 
-    // Wait until all bytes have been written to the serial port
-    sleep(1);
-
-    // READ UA MESSAGE
-    unsigned char buf[BUF_SIZE];
-    int i = 0;
-    int STATE = 0;
-    while (STATE != 5)
+    // sends message at most 3 times
+    while (alarmCount <= 3)
     {
-        int bytes = read(fd, buf + i, 1);
-        //printf("%hx %d\n", buf[i], STATE);
-        if (bytes > 0) {
-            // STATE MACHINE
-            switch (STATE)
-            {
-            case 0:
-                if (buf[i] == FLAG) STATE = 1;
-                break;
-            case 1:
-                if (buf[i] == FLAG) STATE = 1;
-                if (buf[i] == A_UA) STATE = 2;
-                else STATE = 0;
-                break;
-            case 2:
-                if (buf[i] == FLAG) STATE = 1;
-                if (buf[i] == C_UA) STATE = 3;
-                else STATE = 0;
-                break;
-            case 3:
-                if (buf[i] == FLAG) STATE = 1;
-                if (buf[i] == BCC_UA) STATE = 4;
-                else STATE = 0;
-                break;
-            case 4:
-                if (buf[i] == FLAG) STATE = 5;
-                else STATE = 0;
-                break;
-            
-            default:
-                break;
+        // SEND SET MESSAGE
+        int bytes = write(fd, set_message, 5);
+        printf("SET MESSAGE SENT - %d bytes written\n", bytes);
+        sleep(1);
+
+        // sets alarm of 3 seconds
+        if (alarmEnabled == FALSE)
+        {
+            alarm(3); // Set alarm to be triggered in 3s
+            alarmEnabled = TRUE;
+        }
+
+        // READ UA MESSAGE
+        unsigned char buf[BUF_SIZE];
+        int i = 0;
+        int STATE = 0;
+        while (STATE != 5)
+        {
+            int bytes = read(fd, buf + i, 1);
+            //printf("%hx %d\n", buf[i], bytes);
+            if (bytes == -1) break;
+            if (bytes > 0) {
+                // STATE MACHINE
+                switch (STATE)
+                {
+                case 0:
+                    if (buf[i] == FLAG) STATE = 1;
+                    break;
+                case 1:
+                    if (buf[i] == FLAG) STATE = 1;
+                    if (buf[i] == A_UA) STATE = 2;
+                    else STATE = 0;
+                    break;
+                case 2:
+                    if (buf[i] == FLAG) STATE = 1;
+                    if (buf[i] == C_UA) STATE = 3;
+                    else STATE = 0;
+                    break;
+                case 3:
+                    if (buf[i] == FLAG) STATE = 1;
+                    if (buf[i] == BCC_UA) STATE = 4;
+                    else STATE = 0;
+                    break;
+                case 4:
+                    if (buf[i] == FLAG) STATE = 5;
+                    else STATE = 0;
+                    break;
+                
+                default:
+                    break;
+                }
+                i++; 
             }
-            i++; 
+            // timeout
+            if (alarmEnabled == FALSE) break;
+        }
+        
+        // RECEIVED UA MESSAGE
+        if (STATE == 5) {
+            printf("UA RECEIVED\n");
+            break;
         }
     }
-    printf("UA RECEIVED\n");
 
     // Restore the old port settings
     if (tcsetattr(fd, TCSANOW, &oldtio) == -1)
