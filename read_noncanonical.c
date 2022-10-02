@@ -15,12 +15,12 @@
 // included by <termios.h>
 #define BAUDRATE B38400
 #define _POSIX_SOURCE 1 // POSIX compliant source
+struct termios oldtio;
+struct termios newtio;
 
 #define FALSE 0
 #define TRUE 1
-
 #define BUF_SIZE 256
-
 
 #define FLAG 0x7E
 // Campo de Enderesso
@@ -34,20 +34,14 @@
 #define BCC_UA (A_UA ^ A_UA)
 
 
-int main(int argc, char *argv[])
-{
-    // Program usage: Uses either COM1 or COM2
-    const char *serialPortName = argv[1];
-
-    if (argc < 2)
-    {
-        printf("Incorrect program usage\n"
-               "Usage: %s <SerialPort>\n"
-               "Example: %s /dev/ttyS1\n",
-               argv[0],
-               argv[0]);
-        exit(1);
-    }
+int llopen(const char *serialPortName, int flag) {
+    //     argumentos
+    // – porta: COM1, COM2, ...
+    // – flag: TRANSMITTER / RECEIVER
+    // retorno
+    // – identificador da ligação de dados
+    // – valor negativo em caso de erro
+    // ------------------------------------------
 
     // Open serial port device for reading and writing and not as controlling tty
     // because we don't want to get killed if linenoise sends CTRL-C.
@@ -57,9 +51,6 @@ int main(int argc, char *argv[])
         perror(serialPortName);
         exit(-1);
     }
-
-    struct termios oldtio;
-    struct termios newtio;
 
     // Save current port settings
     if (tcgetattr(fd, &oldtio) == -1)
@@ -152,8 +143,25 @@ int main(int argc, char *argv[])
     int bytes = write(fd, ua_message, 5);
     printf("UA MESSAGE SENT - %d bytes written\n", bytes);
 
-    // The while() cycle should be changed in order to respect the specifications
-    // of the protocol indicated in the Lab guide
+    return fd;
+}
+
+int main(int argc, char *argv[])
+{
+    // Program usage: Uses either COM1 or COM2
+    const char *serialPortName = argv[1];
+
+    if (argc < 2)
+    {
+        printf("Incorrect program usage\n"
+               "Usage: %s <SerialPort>\n"
+               "Example: %s /dev/ttyS1\n",
+               argv[0],
+               argv[0]);
+        exit(1);
+    }
+
+    int fd = llopen(serialPortName, 1);
 
     // Restore the old port settings
     if (tcsetattr(fd, TCSANOW, &oldtio) == -1)
