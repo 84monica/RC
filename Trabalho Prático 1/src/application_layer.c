@@ -24,4 +24,50 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
 
     // CALL LLOPEN
     llopen(connectionParameters);
+
+    switch (connectionParameters.role)
+    {
+    case LlTx:
+        // SENDS FILE PACKET BY PACKET
+        // sendFile(filename);
+        {
+            const unsigned char buf[4] = {0x1, 0x2, 0x23, 0x0};
+            llwrite(buf, 4);
+        }
+        break;
+    case LlRx:
+        // RECEIVES FILE PACKET BY PACKET
+        {
+            
+        }
+    default:
+        break;
+    }
+}
+
+void sendFile(const char *filename) {
+    // // OPEN FILE FOR READING
+    // int file_fd;
+    // file_fd = open(filename, "r");
+
+    // // GET FILE SIZE
+    // struct stat fileStats;
+
+    // if (stat(filename, &fileStats) == -1) {
+    //     perror("stat");
+    // }
+
+    // printf("Inode number: %lu\n", fileStats.st_ino);
+    // printf("User ID of owner: %u\n", fileStats.st_uid);
+    // printf("Group ID of owner: %u\n", fileStats.st_gid);
+    // printf("Total file size: %lu bytes\n", fileStats.st_size);
+    // printf("Last status change:       %s", ctime(&fileStats.st_ctime));
+    // printf("Last file access:         %s", ctime(&fileStats.st_atime));
+    // printf("Last file modification:   %s", ctime(&fileStats.st_mtime));
+    
+    // // READ FROM FILE
+    // unsigned char buf[8];
+    // int bytes = read(file_fd, buf, 8);
+
+    // // CLOSE FILE FOR READING
 }

@@ -24,10 +24,13 @@ struct termios newtio;
 #define FLAG 0x7E
 // Campo de Enderesso
 #define A_SET 0x03    // Comandos enviados pelo Emissor e Respostas enviadas pelo Receptor
-#define A_UA 0x03    // Comandos enviados pelo Receptor e Respostas enviadas pelo Emissor
+#define A_UA 0x01    // Comandos enviados pelo Receptor e Respostas enviadas pelo Emissor
 // Campo de Controlo
-#define C_SET 0x03  // Define o tipo de trama 
+// Define o tipo de trama 
+#define C_SET 0x03 
 #define C_UA 0x07
+#define C_0 0x00
+#define C_1 0x40
 // Campo de Proteção
 #define BCC_SET (A_SET ^ C_SET)
 #define BCC_UA (A_UA ^ A_UA)
@@ -37,6 +40,7 @@ struct termios newtio;
 int fd;
 int alarmEnabled = FALSE;
 int alarmCount = 0;
+int trama_0 = TRUE;
 
 
 // Alarm function handler
@@ -247,6 +251,7 @@ int llopen(LinkLayer connectionParameters)
     default:
         break;
     }
+    printf("FINISHED LLOPEN ---------------------------------------\n");
     return 1;
 }
 
@@ -255,8 +260,32 @@ int llopen(LinkLayer connectionParameters)
 ////////////////////////////////////////////////
 int llwrite(const unsigned char *buf, int bufSize)
 {
-    // TODO
+    // CREATE INFORMATION MESSAGE
+    unsigned char packet_to_send[bufSize+6];
+    packet_to_send[0] = FLAG;
+    packet_to_send[1] = A_SET;
+    switch (trama_0)
+    {
+    case TRUE:
+        packet_to_send[2] = C_0;
+        break;
+    case FALSE:
+        packet_to_send[2] = C_1;
+        break;
+    default:
+        break;
+    }
+    packet_to_send[3] = packet_to_send[1] ^ packet_to_send[2];
+    unsigned char BCC2 = buf[0];
+    for (int i = 1; i < bufSize; i++) {
+        BCC2 ^= buf[i];
+        packet_to_send[i+4] = buf[i];
+    }
+    packet_to_send[bufSize+4] = BCC2;
+    packet_to_send[bufSize+5] = FLAG;
 
+    // SEND INFORMATION MESSAGE
+    // int bytes = write(fd, packet_to_send, bufSize+6);
     return 0;
 }
 
