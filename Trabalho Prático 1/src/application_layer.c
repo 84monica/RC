@@ -38,8 +38,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     case LlRx:
         // RECEIVES FILE PACKET BY PACKET
         {
-            // unsigned char *packet;
-            // llread(packet);
+            unsigned char *packet;
+            llread(packet);
         }
     default:
         break;

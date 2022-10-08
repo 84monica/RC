@@ -67,7 +67,7 @@ int llopen(LinkLayer connectionParameters)
 
     // Open serial port device for reading and writing, and not as controlling tty
     // because we don't want to get killed if linenoise sends CTRL-C.
-    int fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);
+    fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);
 
     if (fd < 0)
     {
@@ -422,7 +422,69 @@ int llwrite(const unsigned char *buf, int bufSize)
 ////////////////////////////////////////////////
 int llread(unsigned char *packet)
 {
+    printf("START LLREAD ---------------------------------------\n");
 
+    // READ INFORMATION PACKET
+    unsigned char buf[BUF_SIZE];
+    int i = 0, size_of_buf = 0;
+    int STATE = 0;
+    while (STATE != 5)
+    {
+        int bytes = read(fd, buf + i, 1);
+        //printf("%hx %d\n", buf[i], STATE);
+        if (bytes > 0) {
+            // STATE MACHINE
+            switch (STATE)
+            {
+            case 0:
+                if (buf[i] == FLAG) STATE = 1;
+                break;
+            case 1:
+                if (buf[i] == A_SET) STATE = 2;
+                else STATE = 0;
+                break;
+            case 2:
+                if (buf[i] == FLAG) STATE = 1;
+                if (trama_0 && buf[i] == C_0) STATE = 3;
+                else if (!trama_0 && buf[i] == C_0) STATE = 3;
+                else STATE = 0;
+                break;
+            case 3:
+                if (buf[i] == FLAG) STATE = 1;
+                if (buf[i] == (buf[i-1] ^ buf[i-2])) {
+                    STATE = 4;
+                    i = -1;
+                }
+                else STATE = 0;
+                break;
+            case 4:
+                if (buf[i] == FLAG) STATE = 5;
+                else {
+                    size_of_buf++;
+                }
+                break;
+            
+            default:
+                break;
+            }
+            i++; 
+        }
+    }
+    // for (int i = 0; i < size_of_buf; i++) {
+    //     printf("%hx\n", buf[i]);
+    // }
+
+    // BYTE DESTUFFING 
+    // TO DO --------------------------------------
+
+    // CHECK BCC2
+    // TO DO --------------------------------------
+
+    printf("PACKET RECEIVED\n");
+
+    // SEND RR MESSAGE
+    // TO DO --------------------------------------
+    
     return 0;
 }
 
