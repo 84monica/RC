@@ -31,8 +31,8 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         // SENDS FILE PACKET BY PACKET
         // sendFile(filename);
         {
-            const unsigned char buf[4] = {0x1, 0x2, 0x23, 0x0};
-            llwrite(buf, 4);
+            const unsigned char buf[6] = {0x1, 0x2, 0x7D, 0x23, 0x0, 0x7E};
+            llwrite(buf, 6);
         }
         break;
     case LlRx:

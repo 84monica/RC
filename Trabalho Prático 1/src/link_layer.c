@@ -58,6 +58,7 @@ void alarmHandler(int signal)
 ////////////////////////////////////////////////
 int llopen(LinkLayer connectionParameters)
 {
+    printf("START LLOPEN ---------------------------------------\n");
     // Open serial port device for reading and writing, and not as controlling tty
     // because we don't want to get killed if linenoise sends CTRL-C.
     int fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);
@@ -260,8 +261,41 @@ int llopen(LinkLayer connectionParameters)
 ////////////////////////////////////////////////
 int llwrite(const unsigned char *buf, int bufSize)
 {
+    // GENERATE BCC2
+    unsigned char BCC2 = buf[0];
+    for (int i = 1; i < bufSize; i++) {
+        BCC2 ^= buf[i];
+    }
+
+    // BYTE STUFFING 
+    int counter = 0;
+    for (int i = 0; i < bufSize; i++) {
+        // find out how many 0x7E or 0x7D are present in buf
+        if (buf[i] == 0x7E || buf[i] == 0x7D) counter++;
+    }
+    // check bcc2
+    if (BCC2 == 0x7E || BCC2 == 0x7D) counter++;
+    unsigned char buf_after_byte_stuffing[bufSize+counter];
+    // replace 0x7E and 0x7D
+    for (int i = 0, j = 0; i < bufSize; i++) {
+        if (buf[i] == 0x7E) {
+            buf_after_byte_stuffing[j] = 0x7D;
+            buf_after_byte_stuffing[j+1] = 0x5E;
+            j+=2;
+        }
+        else if (buf[i] == 0x7D) {
+            buf_after_byte_stuffing[j] = 0x7D;
+            buf_after_byte_stuffing[j+1] = 0x5D;
+            j+=2;
+        }
+        else {
+            buf_after_byte_stuffing[j] = buf[i];
+            j++;
+        }
+    }
+
     // CREATE INFORMATION MESSAGE
-    unsigned char packet_to_send[bufSize+6];
+    unsigned char packet_to_send[bufSize+counter+6];
     packet_to_send[0] = FLAG;
     packet_to_send[1] = A_SET;
     switch (trama_0)
@@ -276,16 +310,33 @@ int llwrite(const unsigned char *buf, int bufSize)
         break;
     }
     packet_to_send[3] = packet_to_send[1] ^ packet_to_send[2];
-    unsigned char BCC2 = buf[0];
-    for (int i = 1; i < bufSize; i++) {
-        BCC2 ^= buf[i];
-        packet_to_send[i+4] = buf[i];
+
+    // add buf to information message
+    for (int i = 4, j = 0; i < bufSize+counter+4; i++, j++) {
+        packet_to_send[i] = buf_after_byte_stuffing[j];
     }
-    packet_to_send[bufSize+4] = BCC2;
-    packet_to_send[bufSize+5] = FLAG;
+    // byte stuffing for bcc2
+    if (BCC2 == 0x7E) {
+        packet_to_send[bufSize+counter+3] = 0x7D;
+        packet_to_send[bufSize+counter+4] = 0x5E;
+        packet_to_send[bufSize+counter+5] = FLAG;
+    }
+    else if (BCC2 == 0x7D) {
+        packet_to_send[bufSize+counter+3] = 0x7D;
+        packet_to_send[bufSize+counter+4] = 0x5D;
+        packet_to_send[bufSize+counter+5] = FLAG;
+    }
+    else {
+        packet_to_send[bufSize+counter+4] = BCC2;
+        packet_to_send[bufSize+counter+5] = FLAG;
+    }
+
+    // CHECK MESSAGE TO SEND
+    // for (int i = 0; i < bufSize+counter+6; i++) {
+    //     printf("%hx\n", packet_to_send[i]);
+    // }
 
     // SEND INFORMATION MESSAGE
-    // int bytes = write(fd, packet_to_send, bufSize+6);
     return 0;
 }
 
