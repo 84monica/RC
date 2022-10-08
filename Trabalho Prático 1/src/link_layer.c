@@ -42,6 +42,8 @@ int alarmEnabled = FALSE;
 int alarmCount = 0;
 int trama_0 = TRUE;
 
+LinkLayer connection_parameters; 
+
 
 // Alarm function handler
 void alarmHandler(int signal)
@@ -59,6 +61,10 @@ void alarmHandler(int signal)
 int llopen(LinkLayer connectionParameters)
 {
     printf("START LLOPEN ---------------------------------------\n");
+
+    // save conectionParameters for later usage
+    connection_parameters = connectionParameters;
+
     // Open serial port device for reading and writing, and not as controlling tty
     // because we don't want to get killed if linenoise sends CTRL-C.
     int fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);
@@ -130,7 +136,6 @@ int llopen(LinkLayer connectionParameters)
                 // SEND SET MESSAGE
                 int bytes = write(fd, set_message, 5);
                 printf("SET MESSAGE SENT - %d bytes written\n", bytes);
-                sleep(1);
 
                 // sets alarm of 3 seconds
                 if (alarmEnabled == FALSE)
@@ -186,6 +191,7 @@ int llopen(LinkLayer connectionParameters)
                 
                 // RECEIVED UA MESSAGE
                 if (STATE == 5) {
+                    alarmCount = 0;
                     printf("UA RECEIVED\n");
                     break;
                 }
@@ -261,6 +267,8 @@ int llopen(LinkLayer connectionParameters)
 ////////////////////////////////////////////////
 int llwrite(const unsigned char *buf, int bufSize)
 {
+    printf("START LLWRITE ---------------------------------------\n");
+
     // GENERATE BCC2
     unsigned char BCC2 = buf[0];
     for (int i = 1; i < bufSize; i++) {
@@ -337,6 +345,75 @@ int llwrite(const unsigned char *buf, int bufSize)
     // }
 
     // SEND INFORMATION MESSAGE
+    // Set alarm function handler
+    (void)signal(SIGALRM, alarmHandler);
+
+    // sends message at most 3 times
+    while (alarmCount <= connection_parameters.nRetransmissions)
+    {
+        // SEND INFORMATION PACKET
+        int bytes = write(fd, packet_to_send, sizeof(packet_to_send));
+        printf("INFORMATION PACKET SENT - %d bytes written\n", bytes);
+
+        // sets alarm of 3 seconds
+        if (alarmEnabled == FALSE)
+        {
+            alarm(connection_parameters.timeout); // Set alarm to be triggered in 3s
+            alarmEnabled = TRUE;
+        }
+
+        // READ RESPONSE
+        // TO DO ----------------------------------------------------------------------
+        unsigned char response[BUF_SIZE];
+        int i = 0;
+        int STATE = 0;
+        while (STATE != 5)
+        {
+            int bytes = read(fd, response + i, 1);
+            //printf("%hx %d\n", response[i], bytes);
+            if (bytes == -1) break;
+            if (bytes > 0) {
+                // STATE MACHINE
+                switch (STATE)
+                {
+                case 0:
+                    if (response[i] == FLAG) STATE = 1;
+                    break;
+                case 1:
+                    if (response[i] == FLAG) STATE = 1;
+                    if (response[i] == A_UA) STATE = 2;
+                    else STATE = 0;
+                    break;
+                case 2:
+                    if (response[i] == FLAG) STATE = 1;
+                    if (response[i] == C_UA) STATE = 3;
+                    else STATE = 0;
+                    break;
+                case 3:
+                    if (response[i] == FLAG) STATE = 1;
+                    if (response[i] == BCC_UA) STATE = 4;
+                    else STATE = 0;
+                    break;
+                case 4:
+                    if (response[i] == FLAG) STATE = 5;
+                    else STATE = 0;
+                    break;
+                
+                default:
+                    break;
+                }
+                i++; 
+            }
+            // timeout
+            if (alarmEnabled == FALSE) break;
+        }
+        
+        // RECEIVED UA MESSAGE
+        if (STATE == 5) {
+            printf("UA RECEIVED\n");
+            break;
+        }
+    }
     return 0;
 }
 
@@ -345,7 +422,6 @@ int llwrite(const unsigned char *buf, int bufSize)
 ////////////////////////////////////////////////
 int llread(unsigned char *packet)
 {
-    // TODO
 
     return 0;
 }
