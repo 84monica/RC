@@ -4,6 +4,8 @@
 #include "link_layer.h"
 #include <stdio.h>
 
+#define BUF_SIZE 256
+
 void applicationLayer(const char *serialPort, const char *role, int baudRate,
                       int nTries, int timeout, const char *filename)
 {
@@ -38,7 +40,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     case LlRx:
         // RECEIVES FILE PACKET BY PACKET
         {
-            unsigned char *packet;
+            unsigned char packet[BUF_SIZE];
             llread(packet);
         }
     default:

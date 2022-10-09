@@ -470,15 +470,30 @@ int llread(unsigned char *packet)
             i++; 
         }
     }
-    // for (int i = 0; i < size_of_buf; i++) {
-    //     printf("%hx\n", buf[i]);
-    // }
 
     // BYTE DESTUFFING 
-    // TO DO --------------------------------------
+    int size_of_packet = size_of_buf;
+    for (int i = 0, j = 0; i < size_of_buf; i++, j++) {
+        if (buf[i] == 0x7D && buf[i+1] == 0x5E) {
+            packet[j] = 0x7E;
+            i++; size_of_packet--;
+        }
+        else if (buf[i] == 0x7D && buf[i+1] == 0x5D) {
+            packet[j] = 0x7D;
+            i++; size_of_packet--;
+        }
+        else {
+            packet[j] = buf[i];
+        }
+    }
 
     // CHECK BCC2
-    // TO DO --------------------------------------
+    size_of_packet--;
+    char BCC2 = packet[0];
+    for (int i = 1; i < size_of_packet; i++) {
+        BCC2 ^= packet[i];
+    }
+    if (BCC2 != packet[size_of_packet]) return -1;
 
     printf("PACKET RECEIVED\n");
 
