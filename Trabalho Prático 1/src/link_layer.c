@@ -419,7 +419,7 @@ int llwrite(const unsigned char *buf, int bufSize)
     }
 
     printf("FINISHED LLWRITE ---------------------------------------\n");
-    return 0;
+    return sizeof(packet_to_send);
 }
 
 ////////////////////////////////////////////////
@@ -432,7 +432,7 @@ int llread(unsigned char *packet)
 
     // READ INFORMATION PACKET
     unsigned char buf[BUF_SIZE];
-    int i = 0, size_of_buf = 0;
+    int i = 0, size_of_buf = 0, error = FALSE;
     int STATE = 0;
     while (STATE != 5)
     {
@@ -453,6 +453,16 @@ int llread(unsigned char *packet)
                 if (buf[i] == FLAG) STATE = 1;
                 if (trama_0 == TRUE && buf[i] == C_0) STATE = 3;
                 else if (trama_0 == FALSE && buf[i] == C_1) STATE = 3;
+                // trama 1 not expected
+                else if (trama_0 == TRUE && buf[i] == C_1) {
+                    STATE = 5;
+                    error = TRUE;
+                }
+                // trama 0 not expected
+                else if (trama_0 == TRUE && buf[i] == C_0) {
+                    STATE = 5;
+                    error = TRUE;
+                }
                 else STATE = 0;
                 break;
             case 3:
@@ -508,12 +518,18 @@ int llread(unsigned char *packet)
     rr_message[0] = FLAG;
     rr_message[1] = A_UA;
     if (trama_0 == TRUE) {
-        rr_message[2] = C_RR1;
-        trama_0 = FALSE;
+        if (error) rr_message[2] = C_RR0;
+        else {
+            rr_message[2] = C_RR1;
+            trama_0 = FALSE;
+        }
     }
     else {
-        rr_message[2] = C_RR0;
-        trama_0 = TRUE;
+        if (error) rr_message[2] = C_RR1;
+        else {
+            rr_message[2] = C_RR0;
+            trama_0 = TRUE;
+        }
     }
     rr_message[3] = rr_message[1] ^ rr_message[2];
     rr_message[4] = FLAG;
@@ -523,7 +539,7 @@ int llread(unsigned char *packet)
     printf("RR MESSAGE SENT - %d bytes written\n", bytes);
 
     printf("FINNISHED LLREAD ---------------------------------------\n");
-    return 0;
+    return size_of_packet;
 }
 
 ////////////////////////////////////////////////

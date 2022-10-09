@@ -31,24 +31,26 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     {
     case LlTx:
         // SENDS FILE PACKET BY PACKET
-        // sendFile(filename);
         {
-            const unsigned char buf[6] = {0x1, 0x2, 0x7D, 0x23, 0x0, 0x7E};
-            llwrite(buf, 6);
+            sendFile(filename);
         }
         break;
     case LlRx:
         // RECEIVES FILE PACKET BY PACKET
         {
-            unsigned char packet[BUF_SIZE];
-            llread(packet);
+            receiveFile();
         }
     default:
         break;
     }
+
+    // CALL LLCLOSE
 }
 
 void sendFile(const char *filename) {
+    const unsigned char buf[6] = {0x1, 0x2, 0x7D, 0x23, 0x0, 0x7E};
+    llwrite(buf, 6);    
+
     // // OPEN FILE FOR READING
     // int file_fd;
     // file_fd = open(filename, "r");
@@ -73,4 +75,9 @@ void sendFile(const char *filename) {
     // int bytes = read(file_fd, buf, 8);
 
     // // CLOSE FILE FOR READING
+}
+
+void receiveFile() {
+    unsigned char packet[BUF_SIZE];
+    llread(packet);
 }
