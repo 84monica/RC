@@ -3,6 +3,7 @@
 #include "application_layer.h"
 #include "link_layer.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 
 #define BUF_SIZE 256
@@ -63,7 +64,8 @@ void sendFile(const char *filename) {
     printf("File Size: %ld bytes \n", filesize);
 
     // READ FROM FILE
-    unsigned char *filedata = (unsigned char *)malloc(filesize);
+    unsigned char *filedata;
+    filedata = (unsigned char *)malloc(filesize);
     fread(filedata, sizeof(unsigned char), filesize, file);
 
     // SEND FILE DATA BY CHUNKS
