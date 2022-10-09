@@ -3,6 +3,7 @@
 #include "application_layer.h"
 #include "link_layer.h"
 #include <stdio.h>
+#include <sys/stat.h>
 
 #define BUF_SIZE 256
 
@@ -51,30 +52,23 @@ void sendFile(const char *filename) {
     const unsigned char buf[6] = {0x1, 0x2, 0x7D, 0x23, 0x0, 0x7E};
     llwrite(buf, 6);    
 
-    // // OPEN FILE FOR READING
-    // int file_fd;
-    // file_fd = open(filename, "r");
+    // OPEN FILE FOR READING
+    FILE *file;
+    file = fopen(filename, "rb");
 
-    // // GET FILE SIZE
-    // struct stat fileStats;
+    // GET FILE SIZE
+    struct stat stats;
+    stat(filename, &stats);
+    long filesize = stats.st_size;
+    printf("File Size: %ld bytes \n", filesize);
 
-    // if (stat(filename, &fileStats) == -1) {
-    //     perror("stat");
-    // }
+    // READ FROM FILE
+    unsigned char *filedata = (unsigned char *)malloc(filesize);
+    fread(filedata, sizeof(unsigned char), filesize, file);
 
-    // printf("Inode number: %lu\n", fileStats.st_ino);
-    // printf("User ID of owner: %u\n", fileStats.st_uid);
-    // printf("Group ID of owner: %u\n", fileStats.st_gid);
-    // printf("Total file size: %lu bytes\n", fileStats.st_size);
-    // printf("Last status change:       %s", ctime(&fileStats.st_ctime));
-    // printf("Last file access:         %s", ctime(&fileStats.st_atime));
-    // printf("Last file modification:   %s", ctime(&fileStats.st_mtime));
-    
-    // // READ FROM FILE
-    // unsigned char buf[8];
-    // int bytes = read(file_fd, buf, 8);
+    // SEND FILE DATA BY CHUNKS
 
-    // // CLOSE FILE FOR READING
+    // CLOSE FILE FOR READING
 }
 
 void receiveFile() {
