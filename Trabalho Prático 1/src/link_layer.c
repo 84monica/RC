@@ -270,6 +270,7 @@ int llopen(LinkLayer connectionParameters)
 int llwrite(const unsigned char *buf, int bufSize)
 {
     printf("START LLWRITE ---------------------------------------\n");
+    printf("Sending trama %d\n", !trama_0);
 
     // GENERATE BCC2
     unsigned char BCC2 = buf[0];
@@ -427,6 +428,7 @@ int llwrite(const unsigned char *buf, int bufSize)
 int llread(unsigned char *packet)
 {
     printf("START LLREAD ---------------------------------------\n");
+    printf("Receiving trama %d\n", !trama_0);
 
     // READ INFORMATION PACKET
     unsigned char buf[BUF_SIZE];
