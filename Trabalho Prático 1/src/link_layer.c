@@ -31,6 +31,8 @@ struct termios newtio;
 #define C_UA 0x07
 #define C_0 0x00
 #define C_1 0x40
+#define C_RR0 0x05
+#define C_RR1 0x85
 // Campo de Proteção
 #define BCC_SET (A_SET ^ C_SET)
 #define BCC_UA (A_UA ^ A_UA)
@@ -339,10 +341,9 @@ int llwrite(const unsigned char *buf, int bufSize)
         packet_to_send[bufSize+counter+5] = FLAG;
     }
 
-    // CHECK MESSAGE TO SEND
-    // for (int i = 0; i < bufSize+counter+6; i++) {
-    //     printf("%hx\n", packet_to_send[i]);
-    // }
+    // next trama to send
+    if (trama_0 == TRUE) trama_0 = FALSE;
+    else trama_0 = TRUE;
 
     // SEND INFORMATION MESSAGE
     // Set alarm function handler
@@ -363,14 +364,13 @@ int llwrite(const unsigned char *buf, int bufSize)
         }
 
         // READ RESPONSE
-        // TO DO ----------------------------------------------------------------------
         unsigned char response[BUF_SIZE];
         int i = 0;
         int STATE = 0;
         while (STATE != 5)
         {
             int bytes = read(fd, response + i, 1);
-            //printf("%hx %d\n", response[i], bytes);
+            //printf("%hx %d\n", response[i], STATE);
             if (bytes == -1) break;
             if (bytes > 0) {
                 // STATE MACHINE
@@ -386,12 +386,13 @@ int llwrite(const unsigned char *buf, int bufSize)
                     break;
                 case 2:
                     if (response[i] == FLAG) STATE = 1;
-                    if (response[i] == C_UA) STATE = 3;
+                    if (trama_0 == TRUE && response[i] == C_RR0) STATE = 3;
+                    else if (trama_0 == FALSE && response[i] == C_RR1) STATE = 3;
                     else STATE = 0;
                     break;
                 case 3:
                     if (response[i] == FLAG) STATE = 1;
-                    if (response[i] == BCC_UA) STATE = 4;
+                    if (response[i] == (response[i-1] ^ response[i-2])) STATE = 4;
                     else STATE = 0;
                     break;
                 case 4:
@@ -408,12 +409,15 @@ int llwrite(const unsigned char *buf, int bufSize)
             if (alarmEnabled == FALSE) break;
         }
         
-        // RECEIVED UA MESSAGE
+        // RECEIVED RR MESSAGE
         if (STATE == 5) {
-            printf("UA RECEIVED\n");
+            alarmCount = 0;
+            printf("RR RECEIVED\n");
             break;
         }
     }
+
+    printf("FINISHED LLWRITE ---------------------------------------\n");
     return 0;
 }
 
@@ -445,8 +449,8 @@ int llread(unsigned char *packet)
                 break;
             case 2:
                 if (buf[i] == FLAG) STATE = 1;
-                if (trama_0 && buf[i] == C_0) STATE = 3;
-                else if (!trama_0 && buf[i] == C_0) STATE = 3;
+                if (trama_0 == TRUE && buf[i] == C_0) STATE = 3;
+                else if (trama_0 == FALSE && buf[i] == C_1) STATE = 3;
                 else STATE = 0;
                 break;
             case 3:
@@ -497,9 +501,26 @@ int llread(unsigned char *packet)
 
     printf("PACKET RECEIVED\n");
 
+    // CREATE RR MESSAGE
+    unsigned char rr_message[5];
+    rr_message[0] = FLAG;
+    rr_message[1] = A_UA;
+    if (trama_0 == TRUE) {
+        rr_message[2] = C_RR1;
+        trama_0 = FALSE;
+    }
+    else {
+        rr_message[2] = C_RR0;
+        trama_0 = TRUE;
+    }
+    rr_message[3] = rr_message[1] ^ rr_message[2];
+    rr_message[4] = FLAG;
+
     // SEND RR MESSAGE
-    // TO DO --------------------------------------
-    
+    int bytes = write(fd, rr_message, 5);
+    printf("RR MESSAGE SENT - %d bytes written\n", bytes);
+
+    printf("FINNISHED LLREAD ---------------------------------------\n");
     return 0;
 }
 
