@@ -505,7 +505,7 @@ int llread(unsigned char *packet)
 
     // CHECK BCC2
     size_of_packet--;
-    char BCC2 = packet[0];
+    unsigned char BCC2 = packet[0];
     for (int i = 1; i < size_of_packet; i++) {
         BCC2 ^= packet[i];
     }
