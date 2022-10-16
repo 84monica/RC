@@ -129,9 +129,16 @@ void sendFile(const char *filename) {
     }
 
     // SEND TRAMA END
-
+    unsigned char end[30];
+    end[0] = C_END;
+    for (int i = 1; i < 30; i++) {
+        end[i] = start[i];
+    }
+    llwrite(end, i);
+    printf("END MESSAGE SENT - %d bytes written \n", i);
 
     // CLOSE FILE FOR READING
+    fclose(file);
 }
 
 void receiveFile() {
@@ -157,17 +164,16 @@ void receiveFile() {
     printf("File Name: %s \n", filename);
 
     // RECEIVE PACKET BY PACKET UNTIL TRAMA END
-    int TEST_n = 0;
     unsigned char filedata[filesize];
     unsigned int index_file_data = 0;
-    while (TEST_n <= 109)
+    while (TRUE)
     {
         unsigned char data_received[BUF_SIZE];
         int bytes = llread(data_received);
-        if (bytes != -1) printf("DATA PACKET RECEIVED - %d bytes received \n", bytes);
 
         // check control
         if (data_received[0] == C_DADOS) {
+            if (bytes != -1) printf("DATA PACKET RECEIVED - %d bytes received \n", bytes);
             // get K
             unsigned int K = data_received[2] * 256 + data_received[3];
             printf("%d", K);
@@ -175,7 +181,11 @@ void receiveFile() {
                 filedata[index_file_data] = data_received[i];
             }
         }
-        TEST_n++;
+        // end cycle
+        if (data_received[0] == C_END) {
+            if (bytes != -1) printf("END MESSAGE RECEIVED - %d bytes received \n", bytes);
+            break;
+        }
     }
 
     // SAVE FILE
@@ -197,5 +207,6 @@ void receiveFile() {
     // write data to file
     fwrite(filedata, sizeof(unsigned char), filesize, file);
 
+    // CLOSE FILE FOR WRINTING
     fclose(file);
 }
