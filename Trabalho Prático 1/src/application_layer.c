@@ -53,6 +53,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     }
 
     // CALL LLCLOSE
+    llclose(connectionParameters);
 }
 
 void sendFile(const char *filename) {

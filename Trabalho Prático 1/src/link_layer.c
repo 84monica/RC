@@ -29,6 +29,7 @@ struct termios newtio;
 // Define o tipo de trama 
 #define C_SET 0x03 
 #define C_UA 0x07
+#define C_DISC 0x0B
 #define C_0 0x00
 #define C_1 0x40
 #define C_RR0 0x05
@@ -583,9 +584,221 @@ int llread(unsigned char *packet)
 ////////////////////////////////////////////////
 // LLCLOSE
 ////////////////////////////////////////////////
-int llclose(int showStatistics)
+int llclose(LinkLayer connectionParameters)
 {
-    // TODO
+    printf("START LLCLOSE ---------------------------------------\n");
+
+
+    // SEND/RECEIVE MESSAGES
+    switch (connectionParameters.role)
+    {
+    // TRANSMITER
+    case LlTx:
+        {
+            // CREATE DISC MESSAGE
+            unsigned char disc_message[BUF_SIZE];
+            disc_message[0] = FLAG;
+            disc_message[1] = A_SET;
+            disc_message[2] = C_DISC;
+            disc_message[3] = (A_SET ^ C_DISC);
+            disc_message[4] = FLAG;
+
+            // Set alarm function handler
+            (void)signal(SIGALRM, alarmHandler);
+
+            // sends message at most 3 times
+            while (alarmCount <= connectionParameters.nRetransmissions)
+            {
+                // SEND DISC MESSAGE
+                int bytes = write(fd, disc_message, 5);
+                printf("DISC MESSAGE SENT - %d bytes written\n", bytes);
+
+                // sets alarm of 3 seconds
+                if (alarmEnabled == FALSE)
+                {
+                    alarm(connectionParameters.timeout); // Set alarm to be triggered in 3s
+                    alarmEnabled = TRUE;
+                }
+
+                // READ DISC MESSAGE
+                unsigned char buf[BUF_SIZE];
+                int i = 0;
+                int STATE = 0;
+                while (STATE != 5)
+                {
+                    int bytes = read(fd, buf + i, 1);
+                    //printf("%hx %d\n", buf[i], bytes);
+                    if (bytes == -1) break;
+                    if (bytes > 0) {
+                        // STATE MACHINE
+                        switch (STATE)
+                        {
+                        case 0:
+                            if (buf[i] == FLAG) STATE = 1;
+                            break;
+                        case 1:
+                            if (buf[i] == FLAG) STATE = 1;
+                            if (buf[i] == A_UA) STATE = 2;
+                            else STATE = 0;
+                            break;
+                        case 2:
+                            if (buf[i] == FLAG) STATE = 1;
+                            if (buf[i] == C_DISC) STATE = 3;
+                            else STATE = 0;
+                            break;
+                        case 3:
+                            if (buf[i] == FLAG) STATE = 1;
+                            if (buf[i] == (A_UA ^ C_DISC)) STATE = 4;
+                            else STATE = 0;
+                            break;
+                        case 4:
+                            if (buf[i] == FLAG) STATE = 5;
+                            else STATE = 0;
+                            break;
+                        
+                        default:
+                            break;
+                        }
+                        i++; 
+                    }
+                    // timeout
+                    if (alarmEnabled == FALSE) break;
+                }
+                
+                // RECEIVED DISC MESSAGE
+                if (STATE == 5) {
+                    alarmCount = 0;
+                    printf("DISC RECEIVED\n");
+                    break;
+                }
+            }
+
+            // SEND UA MESSAGE
+            unsigned char ua_message[BUF_SIZE];
+            ua_message[0] = FLAG;
+            ua_message[1] = A_UA;
+            ua_message[2] = C_UA;
+            ua_message[3] = BCC_UA;
+            ua_message[4] = FLAG;
+
+            int bytes = write(fd, ua_message, 5);
+            printf("UA MESSAGE SENT - %d bytes written\n", bytes);
+        }
+        break;
+    // RECEIVER
+    case LlRx:
+        {
+            // READ DISC MESSAGE
+            unsigned char buf[BUF_SIZE];
+            int i = 0;
+            int STATE = 0;
+            while (STATE != 5)
+            {
+                int bytes = read(fd, buf + i, 1);
+                //printf("%hx %d\n", buf[i], STATE);
+                if (bytes > 0) {
+                    // STATE MACHINE
+                    switch (STATE)
+                    {
+                    case 0:
+                        if (buf[i] == FLAG) STATE = 1;
+                        break;
+                    case 1:
+                        if (buf[i] == A_SET) STATE = 2;
+                        else STATE = 0;
+                        break;
+                    case 2:
+                        if (buf[i] == FLAG) STATE = 1;
+                        if (buf[i] == C_DISC) STATE = 3;
+                        else STATE = 0;
+                        break;
+                    case 3:
+                        if (buf[i] == FLAG) STATE = 1;
+                        if (buf[i] == (A_SET ^ C_DISC)) STATE = 4;
+                        else STATE = 0;
+                        break;
+                    case 4:
+                        if (buf[i] == FLAG) STATE = 5;
+                        else STATE = 0;
+                        break;
+                    
+                    default:
+                        break;
+                    }
+                    i++; 
+                }
+            }
+            printf("DISC RECEIVED\n");
+
+            // SEND DISC MESSAGE
+            unsigned char disc_message[BUF_SIZE];
+            disc_message[0] = FLAG;
+            disc_message[1] = A_UA;
+            disc_message[2] = C_DISC;
+            disc_message[3] = (A_UA ^ C_DISC);
+            disc_message[4] = FLAG;
+
+            int bytes = write(fd, disc_message, 5);
+            printf("DISC MESSAGE SENT - %d bytes written\n", bytes);
+
+            // READ UA MESSAGE
+            i = 0;
+            STATE = 0;
+            while (STATE != 5)
+            {
+                int bytes = read(fd, buf + i, 1);
+                //printf("%hx %d\n", buf[i], bytes);
+                if (bytes == -1) break;
+                if (bytes > 0) {
+                    // STATE MACHINE
+                    switch (STATE)
+                    {
+                    case 0:
+                        if (buf[i] == FLAG) STATE = 1;
+                        break;
+                    case 1:
+                        if (buf[i] == FLAG) STATE = 1;
+                        if (buf[i] == A_UA) STATE = 2;
+                        else STATE = 0;
+                        break;
+                    case 2:
+                        if (buf[i] == FLAG) STATE = 1;
+                        if (buf[i] == C_UA) STATE = 3;
+                        else STATE = 0;
+                        break;
+                    case 3:
+                        if (buf[i] == FLAG) STATE = 1;
+                        if (buf[i] == BCC_UA) STATE = 4;
+                        else STATE = 0;
+                        break;
+                    case 4:
+                        if (buf[i] == FLAG) STATE = 5;
+                        else STATE = 0;
+                        break;
+                    
+                    default:
+                        break;
+                    }
+                    i++; 
+                }
+            }
+            printf("UA RECEIVED\n");
+        }
+        break;
+    default:
+        break;
+    }
+
+    // Restore the old port settings
+    if (tcsetattr(fd, TCSANOW, &oldtio) == -1)
+    {
+        perror("tcsetattr");
+        exit(-1);
+    }
+
+    close(fd);
+
+    printf("FINISHED LLCLOSE ---------------------------------------\n");
 
     return 1;
 }
