@@ -43,6 +43,7 @@ int fd;
 int alarmEnabled = FALSE;
 int alarmCount = 0;
 int trama_0 = TRUE;
+unsigned char previous_trama[BUF_SIZE];
 
 LinkLayer connection_parameters; 
 
@@ -261,6 +262,11 @@ int llopen(LinkLayer connectionParameters)
         break;
     }
     printf("FINISHED LLOPEN ---------------------------------------\n");
+
+    // TIMEOUT ERROR
+    if (alarmCount > connection_parameters.nRetransmissions) return -1;
+
+    // SUCCESFULL
     return 1;
 }
 
@@ -389,7 +395,13 @@ int llwrite(const unsigned char *buf, int bufSize)
                     if (response[i] == FLAG) STATE = 1;
                     if (trama_0 == TRUE && response[i] == C_RR0) STATE = 3;
                     else if (trama_0 == FALSE && response[i] == C_RR1) STATE = 3;
-                    else STATE = 0;
+                    else {
+                        // SEND PREVIOUS TRAMA
+                        // SEND INFORMATION PACKET
+                        int bytes = write(fd, previous_trama, sizeof(previous_trama));
+                        printf("INFORMATION PACKET SENT - %d bytes written\n", bytes);
+                        STATE = 0;
+                    }
                     break;
                 case 3:
                     if (response[i] == FLAG) STATE = 1;
@@ -418,7 +430,17 @@ int llwrite(const unsigned char *buf, int bufSize)
         }
     }
 
+    // SAVE TRAMA SENT
+    for (int i = 0; i < BUF_SIZE; i++) {
+        previous_trama[i] = packet_to_send[i];
+    }
+
     printf("FINISHED LLWRITE ---------------------------------------\n");
+
+    // TIMEOUT ERROR
+    if (alarmCount > connection_parameters.nRetransmissions) return -1;
+
+    // SUCCESFULL
     return sizeof(packet_to_send);
 }
 
@@ -509,7 +531,6 @@ int llread(unsigned char *packet)
     for (int i = 1; i < size_of_packet; i++) {
         BCC2 ^= packet[i];
     }
-    if (BCC2 != packet[size_of_packet]) return -1;
 
     printf("PACKET RECEIVED\n");
 
@@ -518,17 +539,29 @@ int llread(unsigned char *packet)
     rr_message[0] = FLAG;
     rr_message[1] = A_UA;
     if (trama_0 == TRUE) {
-        if (error) rr_message[2] = C_RR0;
+        if (error) {
+            rr_message[2] = C_RR0;
+        }
         else {
             rr_message[2] = C_RR1;
             trama_0 = FALSE;
+
+            // BCC ERROR 
+            // TO DO enviar REJ
+            if (BCC2 != packet[size_of_packet]) return -1;
         }
     }
     else {
-        if (error) rr_message[2] = C_RR1;
+        if (error) {
+            rr_message[2] = C_RR1;
+        }
         else {
             rr_message[2] = C_RR0;
             trama_0 = TRUE;
+
+            // BCC ERROR 
+            // TO DO enviar REJ
+            if (BCC2 != packet[size_of_packet]) return -1;
         }
     }
     rr_message[3] = rr_message[1] ^ rr_message[2];
@@ -539,6 +572,11 @@ int llread(unsigned char *packet)
     printf("RR MESSAGE SENT - %d bytes written\n", bytes);
 
     printf("FINNISHED LLREAD ---------------------------------------\n");
+
+    // ERROR DUPLICATED TRAMA RECEIVED
+    if (error) return -1;
+
+    // SUCCESSFULL
     return size_of_packet;
 }
 

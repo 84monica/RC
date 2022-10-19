@@ -33,7 +33,7 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     connectionParameters.timeout = timeout;
 
     // CALL LLOPEN
-    llopen(connectionParameters);
+    if (llopen(connectionParameters) == -1) return;
 
     switch (connectionParameters.role)
     {
@@ -176,7 +176,6 @@ void receiveFile() {
             if (bytes != -1) printf("DATA PACKET RECEIVED - %d bytes received \n", bytes);
             // get K
             unsigned int K = data_received[2] * 256 + data_received[3];
-            printf("%d", K);
             for (int i = 4; i < K+4; i++, index_file_data++) {
                 filedata[index_file_data] = data_received[i];
             }
