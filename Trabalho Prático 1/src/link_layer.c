@@ -34,6 +34,7 @@ struct termios newtio;
 #define C_1 0x40
 #define C_RR0 0x05
 #define C_RR1 0x85
+#define C_REJ 0x01
 // Campo de Proteção
 #define BCC_SET (A_SET ^ C_SET)
 #define BCC_UA (A_UA ^ A_UA)
@@ -55,7 +56,7 @@ void alarmHandler(int signal)
     alarmEnabled = FALSE;
     alarmCount++;
 
-    printf("Alarm #%d\n", alarmCount);
+    printf("time-out %d\n", alarmCount);
     return;
 }
 
@@ -177,7 +178,10 @@ int llopen(LinkLayer connectionParameters)
                         case 3:
                             if (buf[i] == FLAG) STATE = 1;
                             if (buf[i] == BCC_UA) STATE = 4;
-                            else STATE = 0;
+                            else {
+                                printf("error in the protocol\n");
+                                STATE = 0;
+                            }
                             break;
                         case 4:
                             if (buf[i] == FLAG) STATE = 5;
@@ -232,7 +236,10 @@ int llopen(LinkLayer connectionParameters)
                     case 3:
                         if (buf[i] == FLAG) STATE = 1;
                         if (buf[i] == BCC_SET) STATE = 4;
-                        else STATE = 0;
+                        else {
+                            printf("error in the protocol\n");
+                            STATE = 0;
+                        }
                         break;
                     case 4:
                         if (buf[i] == FLAG) STATE = 5;
@@ -394,6 +401,11 @@ int llwrite(const unsigned char *buf, int bufSize)
                     break;
                 case 2:
                     if (response[i] == FLAG) STATE = 1;
+                    if (response[i] == C_REJ) {
+                        STATE = 0;
+                        printf("REJ received\n");
+                        break;
+                    }
                     if (trama_0 == TRUE && response[i] == C_RR0) STATE = 3;
                     else if (trama_0 == FALSE && response[i] == C_RR1) STATE = 3;
                     else {
@@ -494,7 +506,10 @@ int llread(unsigned char *packet)
                     STATE = 4;
                     i = -1;
                 }
-                else STATE = 0;
+                else {
+                    STATE = 0;
+                    printf("error in the protocol\n");
+                }
                 break;
             case 4:
                 if (buf[i] == FLAG) STATE = 5;
@@ -542,27 +557,36 @@ int llread(unsigned char *packet)
     if (trama_0 == TRUE) {
         if (error) {
             rr_message[2] = C_RR0;
+            printf("duplicate frame \n");
         }
         else {
             rr_message[2] = C_RR1;
             trama_0 = FALSE;
 
             // BCC ERROR 
-            // TO DO enviar REJ
-            if (BCC2 != packet[size_of_packet]) return -1;
+            if (BCC2 != packet[size_of_packet]) {
+                printf("error in the data\n");
+                // SEND REJ
+                rr_message[2] = C_REJ;
+            }
         }
     }
     else {
         if (error) {
             rr_message[2] = C_RR1;
+            printf("duplicate frame \n");
         }
         else {
             rr_message[2] = C_RR0;
             trama_0 = TRUE;
 
             // BCC ERROR 
-            // TO DO enviar REJ
-            if (BCC2 != packet[size_of_packet]) return -1;
+            if (BCC2 != packet[size_of_packet]) {
+                printf("error in the data\n");
+                // SEND REJ
+                rr_message[2] = C_REJ;
+                return -1;
+            }
         }
     }
     rr_message[3] = rr_message[1] ^ rr_message[2];
@@ -649,7 +673,10 @@ int llclose(LinkLayer connectionParameters)
                         case 3:
                             if (buf[i] == FLAG) STATE = 1;
                             if (buf[i] == (A_UA ^ C_DISC)) STATE = 4;
-                            else STATE = 0;
+                            else {
+                                printf("error in the protocol\n");
+                                STATE = 0;
+                            }
                             break;
                         case 4:
                             if (buf[i] == FLAG) STATE = 5;
@@ -715,7 +742,10 @@ int llclose(LinkLayer connectionParameters)
                     case 3:
                         if (buf[i] == FLAG) STATE = 1;
                         if (buf[i] == (A_SET ^ C_DISC)) STATE = 4;
-                        else STATE = 0;
+                        else {
+                            printf("error in the protocol\n");
+                            STATE = 0;
+                        }
                         break;
                     case 4:
                         if (buf[i] == FLAG) STATE = 5;
@@ -769,7 +799,10 @@ int llclose(LinkLayer connectionParameters)
                     case 3:
                         if (buf[i] == FLAG) STATE = 1;
                         if (buf[i] == BCC_UA) STATE = 4;
-                        else STATE = 0;
+                        else {
+                            printf("error in the protocol\n");
+                            STATE = 0;
+                        }
                         break;
                     case 4:
                         if (buf[i] == FLAG) STATE = 5;
