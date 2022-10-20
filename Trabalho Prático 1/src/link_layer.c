@@ -272,7 +272,10 @@ int llopen(LinkLayer connectionParameters)
     printf("FINISHED LLOPEN ---------------------------------------\n");
 
     // TIMEOUT ERROR
-    if (alarmCount > connection_parameters.nRetransmissions) return -1;
+    if (alarmCount > connection_parameters.nRetransmissions) {
+        alarmCount = 0;
+        return -1;
+    }
 
     // SUCCESFULL
     return 1;
@@ -451,7 +454,10 @@ int llwrite(const unsigned char *buf, int bufSize)
     printf("FINISHED LLWRITE ---------------------------------------\n");
 
     // TIMEOUT ERROR
-    if (alarmCount > connection_parameters.nRetransmissions) return -1;
+    if (alarmCount > connection_parameters.nRetransmissions) {
+        alarmCount = 0;
+        return -1;
+    }
 
     // SUCCESFULL
     return sizeof(packet_to_send);

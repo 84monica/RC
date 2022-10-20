@@ -109,7 +109,7 @@ void sendFile(const char *filename) {
             for (int i = 4; i < 104; i++, index_file_data++) {
                 data_packet[i] = filedata[index_file_data];
             }
-            llwrite(data_packet, 104);
+            if (llwrite(data_packet, 104) == -1) break;
             bytes_to_send-=100;
             printf("DATA PACKET %d SENT - %d bytes written (%ld bytes left) \n", N, 104, bytes_to_send);
         }
@@ -122,7 +122,7 @@ void sendFile(const char *filename) {
             for (int i = 4; i < bytes_to_send+4; i++, index_file_data++) {
                 data_packet[i] = filedata[index_file_data];
             }
-            llwrite(data_packet, bytes_to_send+4);
+            if (llwrite(data_packet, bytes_to_send+4) == -1) break;
             printf("DATA PACKET %d SENT - %ld bytes written (%d bytes left) \n", N, bytes_to_send, 0);
             bytes_to_send = 0;
         }
