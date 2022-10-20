@@ -554,39 +554,42 @@ int llread(unsigned char *packet)
     unsigned char rr_message[5];
     rr_message[0] = FLAG;
     rr_message[1] = A_UA;
+    // BCC ERROR 
+    if (BCC2 != packet[size_of_packet]) {
+        printf("error in the data\n");
+        // SEND REJ
+        rr_message[2] = C_REJ;
+        rr_message[3] = rr_message[1] ^ rr_message[2];
+        rr_message[4] = FLAG;
+
+        int bytes = write(fd, rr_message, 5);
+        printf("REJ MESSAGE SENT - %d bytes written\n", bytes);
+
+        printf("FINNISHED LLREAD ---------------------------------------\n");
+        return -1;
+    }
     if (trama_0 == TRUE) {
+        // DUPLICATED FRAME
         if (error) {
             rr_message[2] = C_RR0;
             printf("duplicate frame \n");
         }
+        // NO ERROR
         else {
             rr_message[2] = C_RR1;
             trama_0 = FALSE;
-
-            // BCC ERROR 
-            if (BCC2 != packet[size_of_packet]) {
-                printf("error in the data\n");
-                // SEND REJ
-                rr_message[2] = C_REJ;
-            }
         }
     }
     else {
+        // DUPLICATED FRAME
         if (error) {
             rr_message[2] = C_RR1;
             printf("duplicate frame \n");
         }
+        // NO ERROR
         else {
             rr_message[2] = C_RR0;
             trama_0 = TRUE;
-
-            // BCC ERROR 
-            if (BCC2 != packet[size_of_packet]) {
-                printf("error in the data\n");
-                // SEND REJ
-                rr_message[2] = C_REJ;
-                return -1;
-            }
         }
     }
     rr_message[3] = rr_message[1] ^ rr_message[2];

@@ -172,19 +172,21 @@ void receiveFile() {
         unsigned char data_received[BUF_SIZE];
         int bytes = llread(data_received);
 
-        // check control
-        if (data_received[0] == C_DADOS) {
-            if (bytes != -1) printf("DATA PACKET RECEIVED - %d bytes received \n", bytes);
-            // get K
-            unsigned int K = data_received[2] * 256 + data_received[3];
-            for (int i = 4; i < K+4; i++, index_file_data++) {
-                filedata[index_file_data] = data_received[i];
+        if (bytes != -1) {
+            // check control
+            if (data_received[0] == C_DADOS) {
+                if (bytes != -1) printf("DATA PACKET RECEIVED - %d bytes received \n", bytes);
+                // get K
+                unsigned int K = data_received[2] * 256 + data_received[3];
+                for (int i = 4; i < K+4; i++, index_file_data++) {
+                    filedata[index_file_data] = data_received[i];
+                }
             }
-        }
-        // end cycle
-        if (data_received[0] == C_END) {
-            if (bytes != -1) printf("END MESSAGE RECEIVED - %d bytes received \n", bytes);
-            break;
+            // end cycle
+            if (data_received[0] == C_END) {
+                if (bytes != -1) printf("END MESSAGE RECEIVED - %d bytes received \n", bytes);
+                break;
+            }
         }
     }
 
