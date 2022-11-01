@@ -22,7 +22,7 @@ struct termios newtio;
 
 
 #define FLAG 0x7E
-// Campo de Enderesso
+// Campo de Endereço
 #define A_SET 0x03    // Comandos enviados pelo Emissor e Respostas enviadas pelo Receptor
 #define A_UA 0x01    // Comandos enviados pelo Receptor e Respostas enviadas pelo Emissor
 // Campo de Controlo
@@ -67,7 +67,7 @@ int llopen(LinkLayer connectionParameters)
 {
     printf("START LLOPEN ---------------------------------------\n");
 
-    // save conectionParameters for later usage
+    // save connectionParameters for later usage
     connection_parameters = connectionParameters;
 
     // Open serial port device for reading and writing, and not as controlling tty
@@ -121,7 +121,7 @@ int llopen(LinkLayer connectionParameters)
     // SEND/RECEIVE MESSAGES
     switch (connectionParameters.role)
     {
-    // TRANSMITER
+    // TRANSMITTER
     case LlTx:
         {
             // CREATE SET MESSAGE
@@ -277,7 +277,7 @@ int llopen(LinkLayer connectionParameters)
         return -1;
     }
 
-    // SUCCESFULL
+    // SUCCESSFUL
     return 1;
 }
 
@@ -459,7 +459,7 @@ int llwrite(const unsigned char *buf, int bufSize)
         return -1;
     }
 
-    // SUCCESFULL
+    // SUCCESSFUL
     return sizeof(packet_to_send);
 }
 
@@ -571,7 +571,7 @@ int llread(unsigned char *packet)
         int bytes = write(fd, rr_message, 5);
         printf("REJ MESSAGE SENT - %d bytes written\n", bytes);
 
-        printf("FINNISHED LLREAD ---------------------------------------\n");
+        printf("FINISHED LLREAD ---------------------------------------\n");
         return -1;
     }
     if (trama_0 == TRUE) {
@@ -610,7 +610,7 @@ int llread(unsigned char *packet)
     // ERROR DUPLICATED TRAMA RECEIVED
     if (error) return -1;
 
-    // SUCCESSFULL
+    // SUCCESSFUL
     return size_of_packet;
 }
 
@@ -625,7 +625,7 @@ int llclose(LinkLayer connectionParameters)
     // SEND/RECEIVE MESSAGES
     switch (connectionParameters.role)
     {
-    // TRANSMITER
+    // TRANSMITTER
     case LlTx:
         {
             // CREATE DISC MESSAGE
