@@ -202,13 +202,13 @@ void receiveFile() {
         }
         final_file_name[i] = filename[j];
     }
-    // open file for writting
+    // open file for writing
     FILE *file;
     file = fopen((char *) final_file_name, "wb+");
 
     // write data to file
     fwrite(filedata, sizeof(unsigned char), filesize, file);
 
-    // CLOSE FILE FOR WRINTING
+    // CLOSE FILE FOR WRITING
     fclose(file);
 }
