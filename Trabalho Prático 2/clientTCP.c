@@ -111,6 +111,19 @@ int getPort(int sockfd) {
     return (atoi(port) * 256 + atoi(port1));
 }
 
+void receiveFile(int sockfd) {
+    /*get file*/
+    FILE *file = fopen((char *)"timestamp.txt", "wb+");
+
+	char buf[100];
+    int bytes;
+ 	while ((bytes = read(sockfd, buf, 100))>0) {
+    	bytes = fwrite(buf, bytes, 1, file);
+    }
+
+  	fclose(file);
+}
+
 int main(int argc, char **argv) {
 
     // if (argc != 2) {
@@ -208,15 +221,7 @@ int main(int argc, char **argv) {
     readResponse(sockfd);
     readResponse(sockfd);
 
-    /*get file*/
-    FILE *file = fopen((char *)"timestamp.txt", "wb+");
-
-	char buf[100];
- 	while ((bytes = read(new_sockfd, buf, 100))>0) {
-    	bytes = fwrite(buf, bytes, 1, file);
-    }
-
-  	fclose(file);
+    receiveFile(new_sockfd);
 
     if (close(sockfd)<0) {
         perror("close()");
