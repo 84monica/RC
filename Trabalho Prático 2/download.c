@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netdb.h>
 #include <arpa/inet.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -14,8 +15,12 @@
 
 #define FALSE 0
 #define TRUE 1
-#define SERVER_PORT 21
-#define SERVER_ADDR "193.137.29.15"
+
+char username[20]; 
+char password[20];
+char url_path[20];
+char SERVER_ADDR[20];
+int SERVER_PORT;
 
 void readResponse(int sockfd) {
     int digit_counter = 0; int end_read=FALSE;
@@ -113,7 +118,7 @@ int getPort(int sockfd) {
 
 void receiveFile(int sockfd) {
     /*get file*/
-    FILE *file = fopen((char *)"timestamp.txt", "wb+");
+    FILE *file = fopen((char *)"file-received.txt", "wb+");
 
 	char buf[100];
     int bytes;
@@ -124,13 +129,108 @@ void receiveFile(int sockfd) {
   	fclose(file);
 }
 
+void getArguments(char **argv) {
+    int bar_count = 0;
+    int state = 0;
+
+    char host[20];
+    char port[8];
+
+    int index = 0;
+
+    for (int i = 0; i < strlen(argv[1]); i++){
+        switch (state)
+        {
+        case 0:
+            if (argv[1][i] == '/') bar_count++;
+            if (bar_count == 2) {
+                bar_count = 0;
+                state = 1;
+            }
+            break;
+        case 1:
+            // get username
+            if (argv[1][i] == ':') {
+                // stop getting username
+                username[index] = '\0'; 
+                index = 0;
+                state = 2;
+            }
+            else {
+                username[index] = argv[1][i];
+                index++;
+            }
+            break;
+        case 2:
+            // get password
+            if (argv[1][i] == '@') {
+                // stop getting password
+                password[index] = '\0';
+                index = 0;
+                state = 3;
+            }
+            else {
+                password[index] = argv[1][i];
+                index++;
+            }
+            break;
+        case 3:
+            // get host
+            if (argv[1][i] == ':') {
+                // stop getting host
+                host[index] = '\0';
+                index = 0;
+                state = 4;
+            }
+            else {
+                host[index] = argv[1][i];
+                index++;
+            }
+            break;
+        case 4:
+            // get port
+            if (argv[1][i] == '/') {
+                // stop getting port
+                port[index] = '\0';
+                index = 0;
+                state = 5;
+            }
+            else {
+                port[index] = argv[1][i];
+                index++;
+            }
+            break;
+        case 5:
+            url_path[index] = argv[1][i];
+            index++;
+            break;
+        default:
+            break;
+        }
+    }
+
+    // get IP Address from Host
+    struct hostent *h;
+    if ((h = gethostbyname(host)) == NULL) {
+        herror("gethostbyname()");
+        exit(-1);
+    }
+    
+    strcpy(SERVER_ADDR, inet_ntoa(*((struct in_addr *) h->h_addr)));
+
+    // get port
+    SERVER_PORT = atoi(port);
+}
+
 int main(int argc, char **argv) {
 
-    // if (argc != 2) {
-    //     printf("Error Argmuments.\n");
-    //     return -1;
-    // }
-    /*get arguments*/
+    if (argc != 2) {
+        printf("Error Argmuments.\n");
+        return -1;
+    }
+    
+    /*usage - ftp://anonymous:password@ftp.up.pt:21/pub/kodi/timestamp.txt*/
+    getArguments(argv);
 
     int sockfd;
     struct sockaddr_in server_addr;
@@ -156,7 +256,11 @@ int main(int argc, char **argv) {
     readResponse(sockfd);
 
     /*loggin in server*/
-    char user[] = "user anonymous\n";
+    char command[] = "user ";
+    char user[sizeof(command)+sizeof(username)+1];
+    strcpy(user, command);
+    strcat(user, username);
+    strcat(user, "\n");
     size_t bytes = write(sockfd, user, strlen(user));
     if (bytes > 0)
         printf("Bytes escritos %ld\n", bytes);
@@ -166,7 +270,11 @@ int main(int argc, char **argv) {
     }
     readResponse(sockfd);
 
-    char pass[] = "pass qualquer-password\n";
+    strcpy(command, "pass ");
+    char pass[sizeof(command)+sizeof(password)+1];
+    strcpy(pass, command);
+    strcat(pass, password);
+    strcat(pass, "\n");
     bytes = write(sockfd, pass, strlen(pass));
     if (bytes > 0)
         printf("Bytes escritos %ld\n", bytes);
@@ -185,7 +293,7 @@ int main(int argc, char **argv) {
         perror("write()");
         exit(-1);
     }
-    int port = getPort(sockfd);
+    int new_port = getPort(sockfd);
 
     /*open new connection to server in port received*/
     /*server address handling*/
@@ -194,7 +302,7 @@ int main(int argc, char **argv) {
     bzero((char *) &new_server_addr, sizeof(new_server_addr));
     new_server_addr.sin_family = AF_INET;
     new_server_addr.sin_addr.s_addr = inet_addr(SERVER_ADDR);    /*32 bit Internet address network byte ordered*/
-    new_server_addr.sin_port = htons(port);        /*server TCP port must be network byte ordered */
+    new_server_addr.sin_port = htons(new_port);        /*server TCP port must be network byte ordered */
 
     /*open a TCP socket*/
     if ((new_sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -210,7 +318,11 @@ int main(int argc, char **argv) {
     }
 
     /*retr command*/
-    char retr[] = "retr pub/kodi/timestamp.txt\n";
+    strcpy(command, "retr ");
+    char retr[sizeof(command)+sizeof(url_path)+1];
+    strcpy(retr, command);
+    strcat(retr, url_path);
+    strcat(retr, "\n");
     bytes = write(sockfd, retr, strlen(retr));
     if (bytes > 0)
         printf("Bytes escritos %ld\n", bytes);
