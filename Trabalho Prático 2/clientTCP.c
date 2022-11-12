@@ -18,7 +18,6 @@
 #define SERVER_ADDR "193.137.29.15"
 
 void readResponse(int sockfd) {
-    /*read response*/
     int digit_counter = 0; int end_read=FALSE;
     while ( TRUE )
     {
@@ -52,6 +51,64 @@ void readResponse(int sockfd) {
             digit_counter = 0;
         }
     }
+}
+
+int getPort(int sockfd) {
+    int digit_counter = 0; int end_read=FALSE;
+
+    char port[4]; char port1[4]; 
+    int byte_received_counter = 0;
+    
+    while ( TRUE )
+    {
+        // read char
+        char ch;
+        size_t bytes = read(sockfd, &ch, 1);
+        if (bytes > 0) {
+            printf("%c", ch);
+        }
+        else {
+            perror("read()");
+            exit(-1);
+        }
+
+        // get code received
+        if (isdigit(ch)) {
+            if (byte_received_counter == 4) {
+                port[digit_counter] = ch;
+            }
+            else if (byte_received_counter == 5) {
+                port1[digit_counter] = ch;
+            }
+            digit_counter++;
+            continue;
+        }
+        
+        // end reading response condition
+        if (digit_counter == 3 && ch == ' ') {
+            end_read = TRUE;
+            digit_counter = 0;
+        }
+        if (end_read == TRUE && ch == '\n') {
+            break;
+        }
+        // get port number condition
+        if (end_read == TRUE && ch == ',') {
+            if (byte_received_counter == 4) {
+                port[digit_counter] = '\0';
+            }
+            else if (byte_received_counter == 5) {
+                port1[digit_counter] = '\0';
+            }
+            byte_received_counter++;
+            digit_counter = 0;
+        }
+        // not end reading response condition
+        if (digit_counter == 3 && ch != ' ') {
+            digit_counter = 0;
+        }
+    }
+    return (atoi(port) * 256 + atoi(port1));
 }
 
 int main(int argc, char **argv) {
@@ -115,7 +172,51 @@ int main(int argc, char **argv) {
         perror("write()");
         exit(-1);
     }
+    int port = getPort(sockfd);
+
+    /*open new connection to server in port received*/
+    /*server address handling*/
+    int new_sockfd;
+    struct sockaddr_in new_server_addr;
+    bzero((char *) &new_server_addr, sizeof(new_server_addr));
+    new_server_addr.sin_family = AF_INET;
+    new_server_addr.sin_addr.s_addr = inet_addr(SERVER_ADDR);    /*32 bit Internet address network byte ordered*/
+    new_server_addr.sin_port = htons(port);        /*server TCP port must be network byte ordered */
+
+    /*open a TCP socket*/
+    if ((new_sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        perror("socket()");
+        exit(-1);
+    }
+    /*connect to the server*/
+    if (connect(new_sockfd,
+                (struct sockaddr *) &new_server_addr,
+                sizeof(new_server_addr)) < 0) {
+        perror("connect()");
+        exit(-1);
+    }
+
+    /*retr command*/
+    char retr[] = "retr pub/kodi/timestamp.txt\n";
+    bytes = write(sockfd, retr, strlen(retr));
+    if (bytes > 0)
+        printf("Bytes escritos %ld\n", bytes);
+    else {
+        perror("write()");
+        exit(-1);
+    }
     readResponse(sockfd);
+    readResponse(sockfd);
+
+    /*get file*/
+    FILE *file = fopen((char *)"timestamp.txt", "wb+");
+
+	char buf[100];
+ 	while ((bytes = read(new_sockfd, buf, 100))>0) {
+    	bytes = fwrite(buf, bytes, 1, file);
+    }
+
+  	fclose(file);
 
     if (close(sockfd)<0) {
         perror("close()");
