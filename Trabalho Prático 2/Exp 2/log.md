@@ -43,15 +43,28 @@ ifconfig eth0 172.16.21.1/24
 
 ### Começar captura no tux23
 Fazer ping ao tux24
+```bash
+ping 172.16.20.254/24
+```
 Fazer ping ao tux22 (não é suposto dar)
+```bash
+ping 172.16.20.254/24
+```
+
+![PING](exp2.png)
 
 ### Começar capturas no tux22, tux23, tux24
 No tux23:
 ```bash
-ping –b 172.16.20.255
+ping –b 172.16.21.1
 ```
-Ver capturas
-No final fazer o mesmo só que para o tux22
+
+No tux22:
 ```bash
 ping –b 172.16.21.255
 ```
+
+[Captura tux22](exp2-b-tux22.pcapng)
+[Captura tux23](exp2-tux23.pcapng)
+[Captura tux23](exp2-b-tux23.pcapng)
+[Captura tux24](exp2-tux24.pcapng)
