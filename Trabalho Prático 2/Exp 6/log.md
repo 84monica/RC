@@ -12,7 +12,7 @@
 ## Experiment Summary
 
 ### Correr download no tux23 e verificar se o ficheiro chegou corretamente
-Captura!
+[Captura](exp6.pcapng)
 
 ### Observar packets 
 – TCP control and data connections, and its phases (establishment, data,

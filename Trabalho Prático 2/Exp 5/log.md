@@ -17,3 +17,4 @@ nameserver 172.16.1.1
 ping google.com
 ```
 
+[Captura](exp5.pcapng)
