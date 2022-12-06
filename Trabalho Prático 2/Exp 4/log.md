@@ -50,6 +50,11 @@ route add -net 172.16.20.0/24 gw 172.16.21.253
 /ip route add dst-address=172.16.20.0/24 gateway=172.16.21.253
 ```
 
+Default router Rc
+```bash
+/ip route add dst-address=0.0.0.0/0 gateway=172.16.1.254
+```
+
 ### Verificar que tux23 consegue fazer ping a todas as network interfaces
 
 ping tux24

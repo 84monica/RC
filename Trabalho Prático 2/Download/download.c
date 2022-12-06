@@ -20,7 +20,7 @@ char username[20];
 char password[20];
 char url_path[20];
 char SERVER_ADDR[20];
-int SERVER_PORT;
+int SERVER_PORT = 21;
 
 void readResponse(int sockfd) {
     int digit_counter = 0; int end_read=FALSE;
@@ -134,7 +134,6 @@ void getArguments(char **argv) {
     int state = 0;
 
     char host[20];
-    char port[8];
 
     int index = 0;
 
@@ -176,7 +175,7 @@ void getArguments(char **argv) {
             break;
         case 3:
             // get host
-            if (argv[1][i] == ':') {
+            if (argv[1][i] == '/') {
                 // stop getting host
                 host[index] = '\0';
                 index = 0;
@@ -188,19 +187,6 @@ void getArguments(char **argv) {
             }
             break;
         case 4:
-            // get port
-            if (argv[1][i] == '/') {
-                // stop getting port
-                port[index] = '\0';
-                index = 0;
-                state = 5;
-            }
-            else {
-                port[index] = argv[1][i];
-                index++;
-            }
-            break;
-        case 5:
             url_path[index] = argv[1][i];
             index++;
             break;
@@ -217,9 +203,6 @@ void getArguments(char **argv) {
     }
     
     strcpy(SERVER_ADDR, inet_ntoa(*((struct in_addr *) h->h_addr)));
-
-    // get port
-    SERVER_PORT = atoi(port);
 }
 
 int main(int argc, char **argv) {
@@ -229,7 +212,7 @@ int main(int argc, char **argv) {
         return -1;
     }
     
-    /*usage - ftp://anonymous:password@ftp.up.pt:21/pub/kodi/timestamp.txt*/
+    /*usage - ./download ftp://anonymous:password@ftp.up.pt/pub/kodi/timestamp.txt*/
     getArguments(argv);
 
     int sockfd;
