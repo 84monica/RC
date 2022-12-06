@@ -14,7 +14,7 @@
 No switch, adicionar ether2 router à bridge 21
 ```
 /interface bridge port remove [find interface=etherX]
-/interface bridge port add bridge=bridge20 interface=etherX
+/interface bridge port add bridge=bridge21 interface=etherX
 ```
 
 Conectar ether1 à labnetwork P2.1 e o ether 2 a uma porta da bridge 21
@@ -28,7 +28,7 @@ Configurar Router
 Configurar endereço ip através da consola do router
 ```
 /ip address add address=172.16.1.29/24 interface=ether1
-/ip address add address=172.16.1.254/24 interface=ether2
+/ip address add address=172.16.21.254/24 interface=ether2
 /ip address print
 ```
 ![Ip Adress Configuration](ipconfig.png)
@@ -46,7 +46,7 @@ route add default gw 172.16.21.254
 
 No tux22 e no Rc adicionar routes para 172.16.Y0.0/24
 ```bash
-route add -net 172.16.1.0/24 gw 172.16.21.254
+route add -net 172.16.20.0/24 gw 172.16.21.253
 /ip route add dst-address=172.16.20.0/24 gateway=172.16.21.253
 ```
 
