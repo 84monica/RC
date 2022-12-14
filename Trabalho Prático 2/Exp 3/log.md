@@ -10,7 +10,7 @@
 
 ## Experiment Summary
 
-### Tranformar tux24 num router
+### Configurar eth1 para o tux24
 
 ```bash
 ifconfig eth1 172.16.21.253/24
