@@ -9,8 +9,10 @@
 
 ### Configurar DNS no tux22, tux23 e tux24
 
-Edit /etc/resolv.conf, clean the file and add the IP address of the DNS server
+Edit /etc/resolv.conf, clean the file and add the IP address of the DNS server:
+```conf
 nameserver 172.16.1.1
+```
 
 ### Verificar se nomes podem ser usados nos hosts
 ```bash
