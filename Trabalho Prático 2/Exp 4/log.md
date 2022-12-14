@@ -58,8 +58,11 @@ Default router Rc
 ### Verificar que tux23 consegue fazer ping a todas as network interfaces
 
 ping tux24
+
 ![Ping tux24](Screenshot%20at%202022-11-24%2013-00-49.png)
+
 ping tux22 and Rc
+
 ![Ping tux22 and Rc2](Screenshot%20at%202022-11-24%2013-00-56.png)
 
 ### No tux22
